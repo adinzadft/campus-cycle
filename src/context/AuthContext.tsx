@@ -17,7 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   submitKtm: (payload: { studentId: string; ktmImageUrl: string; campus?: string }) => Promise<void>;
   updateProfile: (payload: { name?: string; campus?: string; whatsapp?: string; studentId?: string }) => Promise<void>;
-  verifyEmail: (code?: string) => Promise<void>;
+  verifyEmail: (email: string, code: string) => Promise<any>;
   loginAsDemoStudent: () => Promise<AuthResponse>;
   loginAsDemoKtmStudent: () => Promise<AuthResponse>;
   loginAsDemoAdmin: () => Promise<AuthResponse>;
@@ -87,9 +87,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(res.user);
   };
 
-  const verifyEmail = async (code?: string) => {
-    const res = await api.auth.verifyEmail(code);
+  const verifyEmail = async (email: string, code: string) => {
+    const res = await api.auth.verifyEmail(email, code);
     setUser(res.user);
+    return res;
   };
 
   const loginAsDemoStudent = async (): Promise<AuthResponse> => {

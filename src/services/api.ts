@@ -228,18 +228,36 @@ export const api = {
       }
     },
 
-    async verifyEmail(_code?: string): Promise<{ user: User; message: string }> {
-      const currentUser = await api.auth.getMe();
-      await supabase.from('profiles').update({ is_email_verified: true }).eq('id', currentUser.id);
-      
-      const updatedUser: User = {
-        ...currentUser,
-        verificationStatus: currentUser.verificationStatus === 'ktm_verified' ? 'ktm_verified' : 'email_verified',
-        verificationMethod: currentUser.verificationStatus === 'ktm_verified' ? 'ktm' : 'email',
-        emailVerified: true,
-      };
+    async verifyEmail(email: string, token: string) {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      });
 
-      return { user: updatedUser, message: 'Email berhasil diverifikasi' };
+      if (error) throw new Error(error.message || 'Kode verifikasi salah.');
+
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .update({ is_email_verified: true })
+          .eq('id', data.user.id);
+      }
+
+      const currentUser = await api.auth.getMe();
+      return { user: currentUser, message: 'Email berhasil diverifikasi' };
+    },
+    async resendOtp(email: string) {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Gagal mengirim ulang kode OTP.');
+      }
+
+      return { message: 'Kode OTP baru berhasil dikirim!' };
     },
 
     async submitKtm(payload: { studentId: string; ktmImageUrl: string; campus?: string }): Promise<{ request: KTMRequest; user: User; message: string }> {

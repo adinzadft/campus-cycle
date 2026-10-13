@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useToast } from './Toast.tsx';
+import { api } from '../services/api'; // Sesuaikan lokasi/path file api.ts milikmu
 import {
   X,
   LogIn,
   UserPlus,
   GraduationCap,
-  Sparkles,
-  ShieldCheck,
   AlertTriangle,
-  Lock,
-  MailCheck,
-  CheckCircle2,
-  RefreshCw
+  MailCheck
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -35,14 +31,7 @@ const DISALLOWED_PERSONAL_DOMAINS = [
 ];
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const {
-    login,
-    register,
-    verifyEmail,
-    loginAsDemoStudent,
-    loginAsDemoKtmStudent,
-    loginAsDemoAdmin
-  } = useAuth();
+  const { login, register, verifyEmail } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -52,17 +41,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [campus, setCampus] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Post-registration email verification step
-  const [justRegisteredUser, setJustRegisteredUser] = useState<{ id: string; email: string; code?: string } | null>(null);
+  // Tampilan Verifikasi OTP setelah Pendaftaran
+  const [justRegisteredEmail, setJustRegisteredEmail] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
+const handleResendOtp = async () => {
+  if (!justRegisteredEmail) return;
+
+  setIsResending(true);
+  try {
+    await api.auth.resendOtp(justRegisteredEmail);
+    showToast('Kode OTP baru berhasil dikirim ke email Anda!', 'success');
+  } catch (err: any) {
+    showToast(err.message || 'Gagal mengirim ulang kode.', 'error');
+  } finally {
+    setIsResending(false);
+  }
+};
 
   if (!isOpen) return null;
 
-  // Real-time email validation check
+  // Validasi real-time email domain kampus
   const getEmailValidationError = (value: string): string | null => {
     if (!value) return null;
     const trimmed = value.trim().toLowerCase();
@@ -76,10 +79,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     if (atIndex !== -1) {
       const domain = trimmed.substring(atIndex + 1);
       if (DISALLOWED_PERSONAL_DOMAINS.includes(domain)) {
-        return `Email pribadi (@${domain}) tidak diizinkan. Harap gunakan email mahasiswa resmi kampus (misal: @student.uin-malang.ac.id atau .ac.id).`;
+        return `Email pribadi (@${domain}) tidak diizinkan. Harap gunakan email mahasiswa resmi kampus.`;
       }
       if (domain.includes('.') && !domain.endsWith('.ac.id') && !domain.includes('.student.') && !domain.startsWith('student.') && !domain.startsWith('students.')) {
-        return `Domain '@${domain}' bukan domain kampus yang diizinkan. Harap gunakan email kampus resmi Anda.`;
+        return `Domain '@${domain}' bukan domain kampus resmi. Harap gunakan email kampus Anda.`;
       }
     }
     return null;
@@ -91,7 +94,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     e.preventDefault();
     setErrorMessage('');
 
-    // Pre-flight validation
     const validationError = getEmailValidationError(email);
     if (validationError) {
       setErrorMessage(validationError);
@@ -103,28 +105,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     try {
       if (mode === 'login') {
         const res = await login(email.trim(), password);
-        showToast(`Selamat datang kembali, ${res.user.name}!`, 'success');
+        showToast(`Selamat datang kembali, ${res.user.name || 'Mahasiswa'}!`, 'success');
         onClose();
         if (onSuccess) onSuccess();
       } else {
-        const res = await register({
+        // Format otomatis WA ke 62...
+        const formattedWhatsapp = whatsapp.trim().replace(/^0/, '62');
+
+        await register({
           name: name.trim(),
           email: email.trim(),
           password,
           campus: campus.trim(),
-          whatsapp: whatsapp.trim()
+          whatsapp: formattedWhatsapp
         });
 
-        showToast('Pendaftaran akun berhasil!', 'success');
-        setJustRegisteredUser({
-          id: res.user.id,
-          email: res.user.email,
-          code: (res as any).verificationCode
-        });
-        setInputCode((res as any).verificationCode || '');
+        showToast('Kode verifikasi telah dikirim ke email kampus Anda!', 'success');
+        setJustRegisteredEmail(email.trim());
       }
     } catch (err: any) {
-      const msg = err.message || 'Terjadi kesalahan pada server saat autentikasi.';
+      const msg = err.message || 'Terjadi kesalahan saat autentikasi.';
       setErrorMessage(msg);
       showToast(msg, 'error');
     } finally {
@@ -133,69 +133,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   const handleConfirmVerification = async () => {
+    if (!justRegisteredEmail || !inputCode.trim()) return;
+
     setIsVerifyingCode(true);
     try {
-      await verifyEmail(inputCode.trim());
-      showToast('Email kampus Anda berhasil diverifikasi!', 'success');
-      setJustRegisteredUser(null);
+      // Verifikasi OTP dan otomatis login
+      await verifyEmail(justRegisteredEmail, inputCode.trim());
+      showToast('Email berhasil diverifikasi! Anda resmi masuk.', 'success');
+      setJustRegisteredEmail(null);
       onClose();
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      showToast(err.message || 'Gagal memverifikasi kode email.', 'error');
+      showToast(err.message || 'Kode verifikasi 6-digit salah atau kadaluwarsa.', 'error');
     } finally {
       setIsVerifyingCode(false);
-    }
-  };
-
-  // Demo Login handlers
-  const handleDemoStudent = async () => {
-    setErrorMessage('');
-    setDemoLoading('student');
-    try {
-      const res = await loginAsDemoStudent();
-      showToast(`Berhasil masuk mode demo: ${res.user.name} (UIN Malang)`, 'success');
-      onClose();
-      if (onSuccess) onSuccess();
-    } catch (err: any) {
-      const msg = err.message || 'Gagal masuk mode demo.';
-      setErrorMessage(msg);
-      showToast(msg, 'error');
-    } finally {
-      setDemoLoading(null);
-    }
-  };
-
-  const handleDemoKtmStudent = async () => {
-    setErrorMessage('');
-    setDemoLoading('ktm_student');
-    try {
-      const res = await loginAsDemoKtmStudent();
-      showToast(`Berhasil masuk mode demo: ${res.user.name} (KTM Terverifikasi)`, 'success');
-      onClose();
-      if (onSuccess) onSuccess();
-    } catch (err: any) {
-      const msg = err.message || 'Gagal masuk mode demo.';
-      setErrorMessage(msg);
-      showToast(msg, 'error');
-    } finally {
-      setDemoLoading(null);
-    }
-  };
-
-  const handleDemoAdmin = async () => {
-    setErrorMessage('');
-    setDemoLoading('admin');
-    try {
-      const res = await loginAsDemoAdmin();
-      showToast(`Berhasil masuk mode demo: Administrator CampusCycle`, 'success');
-      onClose();
-      if (onSuccess) onSuccess();
-    } catch (err: any) {
-      const msg = err.message || 'Gagal masuk mode demo admin.';
-      setErrorMessage(msg);
-      showToast(msg, 'error');
-    } finally {
-      setDemoLoading(null);
     }
   };
 
@@ -222,74 +173,68 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <GraduationCap className="w-6 h-6" />
           </div>
           <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-            {justRegisteredUser
+            {justRegisteredEmail
               ? 'Verifikasi Email Kampus'
               : mode === 'login'
               ? 'Masuk ke CampusCycle'
               : 'Daftar Akun Mahasiswa'}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            {justRegisteredUser
-              ? 'Konfirmasi kode verifikasi untuk mengaktifkan akun mahasiswa Anda.'
+            {justRegisteredEmail
+              ? 'Masukkan 6 digit kode yang dikirim ke Gmail kampus Anda.'
               : mode === 'login'
               ? 'Khusus mahasiswa dengan email resmi kampus (@student.* atau *.ac.id).'
               : 'Mendaftar menggunakan email kampus untuk bergabung dalam ekosistem terpercaya.'}
           </p>
         </div>
 
-        {/* Registration Email Verification View */}
-        {justRegisteredUser ? (
+        {/* Tampilan Input Kode OTP setelah Submit Registrasi */}
+        {justRegisteredEmail ? (
           <div className="space-y-4 text-xs">
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-2">
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold">
                 <MailCheck className="w-4 h-4 text-emerald-600" />
-                <span>Pendaftaran Berhasil!</span>
+                <span>Cek Inbox Gmail Kampus Anda</span>
               </div>
               <p className="text-slate-700">
-                Email Anda: <strong>{justRegisteredUser.email}</strong>
-              </p>
-              <p className="text-emerald-800 text-[11px]">
-                Kode verifikasi email mahasiswa Anda adalah:{' '}
-                <strong className="font-mono text-emerald-950 text-sm bg-white px-2 py-0.5 rounded border border-emerald-300">
-                  {justRegisteredUser.code}
-                </strong>
+                Kami telah mengirimkan 6-digit kode OTP ke: <strong>{justRegisteredEmail}</strong>
               </p>
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 Masukkan Kode Verifikasi 6-Digit:
               </label>
               <input
                 type="text"
+                maxLength={6}
                 value={inputCode}
-                onChange={(e) => setInputCode(e.target.value)}
-                placeholder="Misal: 123456"
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center text-base font-mono tracking-widest font-bold focus:outline-emerald-600 focus:bg-white"
+                onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="Contoh: 123456"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center text-lg font-mono tracking-widest font-bold focus:outline-emerald-600 focus:bg-white"
               />
             </div>
-
-            <div className="flex gap-2 pt-2">
+            {/* Tombol Kirim Ulang Kode */}
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-slate-500">Belum menerima kode?</span>
               <button
                 type="button"
-                onClick={() => {
-                  setJustRegisteredUser(null);
-                  onClose();
-                  if (onSuccess) onSuccess();
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+                onClick={handleResendOtp}
+                disabled={isResending}
+                className="text-emerald-600 hover:text-emerald-700 font-bold hover:underline disabled:opacity-50"
               >
-                Nanti Saja
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmVerification}
-                disabled={isVerifyingCode || !inputCode.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                {isVerifyingCode ? 'Memverifikasi...' : 'Verifikasi Sekarang'}
+                {isResending ? 'Mengirim...' : 'Kirim Ulang Kode'}
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleConfirmVerification}
+              disabled={isVerifyingCode || inputCode.length < 6}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-sm shadow-xs transition-colors"
+            >
+              {isVerifyingCode ? 'Memverifikasi...' : 'Verifikasi & Masuk Sekarang'}
+            </button>
           </div>
         ) : (
           <>
@@ -438,8 +383,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   ? 'Masuk ke Akun Mahasiswa'
                   : 'Daftar Akun Mahasiswa'}
               </button>
-            </form> 
-            
+            </form>
           </>
         )}
       </div>
