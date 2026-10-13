@@ -438,73 +438,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   ? 'Masuk ke Akun Mahasiswa'
                   : 'Daftar Akun Mahasiswa'}
               </button>
-            </form>
-
-            {/* SEPARATED LOCAL DEMO MODE SECTION */}
-            <div className="mt-6 pt-5 border-t border-slate-200">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>Mode Demo Lokal (Pengujian)</span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Disediakan khusus untuk menguji alur aplikasi di lingkungan pratinjau. Mode demo terpisah dari login akun produksi dan bukan bukti identitas mahasiswa asli.
-                </p>
-
-                <div className="space-y-1.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleDemoStudent}
-                    disabled={Boolean(demoLoading)}
-                    className="w-full py-2 px-3 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 text-xs font-semibold flex items-center justify-between transition-colors shadow-2xs"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {demoLoading === 'student' ? (
-                        <RefreshCw className="w-3 h-3 animate-spin text-emerald-600" />
-                      ) : (
-                        <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                      )}
-                      <span>Demo Mahasiswa (Bintang Pratama)</span>
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-bold">UIN Malang</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDemoKtmStudent}
-                    disabled={Boolean(demoLoading)}
-                    className="w-full py-2 px-3 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-800 text-xs font-semibold flex items-center justify-between transition-colors shadow-2xs"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {demoLoading === 'ktm_student' ? (
-                        <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
-                      ) : (
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                      )}
-                      <span>Demo Mahasiswa KTM (Siti Rahma)</span>
-                    </span>
-                    <span className="text-[10px] text-blue-700 font-bold">UB Malang</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDemoAdmin}
-                    disabled={Boolean(demoLoading)}
-                    className="w-full py-2 px-3 rounded-lg bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 text-slate-700 hover:text-purple-800 text-xs font-semibold flex items-center justify-between transition-colors shadow-2xs"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {demoLoading === 'admin' ? (
-                        <RefreshCw className="w-3 h-3 animate-spin text-purple-600" />
-                      ) : (
-                        <Lock className="w-3.5 h-3.5 text-purple-600" />
-                      )}
-                      <span>Demo Administrator CampusCycle</span>
-                    </span>
-                    <span className="text-[10px] text-purple-700 font-bold">Admin</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            </form> 
+            
           </>
         )}
       </div>
