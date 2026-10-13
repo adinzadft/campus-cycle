@@ -1,0 +1,7 @@
+{
+  "name": "CampusCycle",
+  "description": "Platform marketplace barang preloved eksklusif mahasiswa untuk jual beli terpercaya antar-kampus dengan COD aman dan kontak langsung WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
