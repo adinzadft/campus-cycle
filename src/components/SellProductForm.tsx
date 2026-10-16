@@ -5,13 +5,12 @@ import { api } from '../services/api.ts';
 import { ProductCategory, ProductCondition } from '../types/index.ts';
 import {
   Upload,
-  Image as ImageIcon,
   ShieldAlert,
   CheckCircle,
-  HelpCircle,
   Building2,
   MapPin,
-  Lock
+  Lock,
+  X
 } from 'lucide-react';
 
 interface SellProductFormProps {
@@ -36,11 +35,13 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
   const [campus, setCampus] = useState(user?.campus || '');
   const [codLocation, setCodLocation] = useState('');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // State untuk Multi-Image Upload
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If user is not logged in
+  // Jika pengguna belum login
   if (!user) {
     return (
       <div className="max-w-xl mx-auto my-8 p-8 bg-white rounded-2xl border border-slate-200 shadow-xs text-center space-y-4">
@@ -63,7 +64,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
     );
   }
 
-  // If user is unverified
+  // Jika verifikasi pengguna belum lengkap
   if (user.verificationStatus === 'unverified') {
     return (
       <div className="max-w-xl mx-auto my-8 p-8 bg-white rounded-2xl border border-amber-200 shadow-xs text-center space-y-4">
@@ -93,35 +94,54 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
     );
   }
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handler saat memilih file foto baru
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      showToast('Harap pilih file gambar (JPG, PNG, atau WEBP).', 'error');
-      return;
+    const filesArray = Array.from(e.target.files);
+    const validFiles: File[] = [];
+
+    for (const file of filesArray) {
+      if (!file.type.startsWith('image/')) {
+        showToast(`File "${file.name}" bukan format gambar valid.`, 'error');
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showToast(`Ukuran file "${file.name}" melebihi 5 MB.`, 'error');
+        continue;
+      }
+      validFiles.push(file);
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Ukuran gambar maksimal 5 MB.', 'error');
-      return;
+    if (validFiles.length === 0) return;
+
+    // Batasi maksimal 5 foto
+    const combinedFiles = [...selectedFiles, ...validFiles].slice(0, 5);
+    if (selectedFiles.length + validFiles.length > 5) {
+      showToast('Maksimal 5 foto per produk.', 'info');
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setImagePreview(base64);
-      setImageUrl(base64);
-    };
-    reader.readAsDataURL(file);
+    setSelectedFiles(combinedFiles);
+
+    // Generate preview URLs
+    const newPreviews = combinedFiles.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(newPreviews);
+  };
+
+  // Handler hapus foto dari daftar antrean
+  const handleRemoveImage = (index: number) => {
+    const updatedFiles = selectedFiles.filter((_, i) => i !== index);
+    const updatedPreviews = previewUrls.filter((_, i) => i !== index);
+
+    setSelectedFiles(updatedFiles);
+    setPreviewUrls(updatedPreviews);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const finalImage = imagePreview || imageUrl.trim();
-    if (!finalImage) {
-      showToast('Foto barang wajib diunggah!', 'error');
+    if (selectedFiles.length === 0) {
+      showToast('Minimal unggah 1 foto produk!', 'error');
       return;
     }
 
@@ -139,13 +159,18 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
 
     setIsSubmitting(true);
     try {
+      // 1. Upload seluruh file gambar ke Supabase Storage Bucket 'product-images'
+      const uploadedUrls = await api.products.uploadProductImages(selectedFiles);
+
+      // 2. Simpan record produk ke database Supabase
       await api.products.create({
         name: name.trim(),
         price: numPrice,
         category,
         condition,
         description: description.trim(),
-        imageUrl: finalImage,
+        imageUrl: uploadedUrls[0] || '', // Cover utama
+        images: uploadedUrls,            // Array seluruh foto
         whatsapp: cleanWa,
         campus: campus.trim() || user.campus,
         codLocation: codLocation.trim() || 'Area Kampus',
@@ -155,8 +180,8 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
       setName('');
       setPrice('');
       setDescription('');
-      setImageUrl('');
-      setImagePreview(null);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
       setCodLocation('');
       onSuccess();
     } catch (err: any) {
@@ -173,7 +198,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
           <span>Pasang Barang Jualan Baru</span>
         </h2>
         <p className="text-slate-500 text-xs sm:text-sm mt-1">
-          Barang preloved Anda akan langsung terlihat oleh mahasiswa satu kampus. COD 100% tanpa potongan admin.
+          Barang preloved Anda akan langsung terlihat oleh mahasiswa. COD 100% tanpa potongan admin.
         </p>
       </div>
 
@@ -301,45 +326,60 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
           </div>
         </div>
 
-        {/* Foto Barang */}
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Foto Produk *
+        {/* Multi-Image Upload */}
+        <div className="space-y-2">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Foto Produk (Maksimal 5 Foto) *
           </label>
+
           <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center space-y-3">
-            {imagePreview ? (
-              <div className="relative max-w-xs mx-auto aspect-4/3 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImagePreview(null);
-                    setImageUrl('');
-                  }}
-                  className="absolute top-2 right-2 px-2 py-1 bg-slate-900/80 text-white rounded-md text-xs font-bold"
-                >
-                  Ganti Foto
-                </button>
-              </div>
-            ) : (
+            {selectedFiles.length < 5 && (
               <div>
                 <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold shadow-2xs transition-colors">
                   <Upload className="w-4 h-4 text-emerald-600" />
-                  <span>Pilih File Foto dari Perangkat</span>
+                  <span>Pilih Foto ({selectedFiles.length}/5)</span>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleImageFileChange}
+                    multiple
+                    onChange={handleFileChange}
                     className="hidden"
                   />
                 </label>
                 <p className="text-[11px] text-slate-400 mt-2">
-                  Format JPG, PNG, atau WEBP (Maksimal 5 MB). Pastikan foto jelas dan asli.
+                  Format JPG, PNG, atau WEBP (Maksimal 5 MB per foto). Foto pertama akan menjadi sampul utama.
                 </p>
+              </div>
+            )}
+
+            {/* Grid Preview Foto yang Dipilih */}
+            {previewUrls.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-3">
+                {previewUrls.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="relative aspect-square rounded-xl bg-slate-100 overflow-hidden border border-slate-200 group shadow-2xs"
+                  >
+                    <img
+                      src={url}
+                      alt={`Preview ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                        Sampul
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(idx)}
+                      className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-1 transition-colors"
+                      aria-label="Hapus Foto"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -368,7 +408,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
             className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
-              <span>Menyimpan ke Etalase...</span>
+              <span>Mengunggah Foto & Menyimpan...</span>
             ) : (
               <>
                 <CheckCircle className="w-4 h-4" />

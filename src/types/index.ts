@@ -46,6 +46,7 @@ export interface Product {
   condition: ProductCondition;
   description: string;
   imageUrl: string;
+  images?: string[];
   whatsapp: string;
   campus: string;
   codLocation?: string;

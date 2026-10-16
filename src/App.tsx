@@ -15,14 +15,9 @@ import { Product, ProductCategory } from './types/index.ts';
 import { api } from './services/api.ts';
 import {
   Search,
-  Filter,
-  SlidersHorizontal,
   PackageOpen,
   RotateCcw,
   RefreshCw,
-  Building2,
-  ChevronDown,
-  Info
 } from 'lucide-react';
 
 const CATEGORIES: ProductCategory[] = [
@@ -55,6 +50,36 @@ const CampusCycleContent: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isKtmModalOpen, setIsKtmModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Auto Open Product Detail dari Parameter URL saat pertama kali halaman dimuat
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productIdFromUrl = urlParams.get('product');
+
+    if (productIdFromUrl) {
+      api.products.getById(productIdFromUrl)
+        .then((productData) => {
+          setSelectedProduct(productData);
+        })
+        .catch(() => {
+          showToast('Barang dari tautan tidak ditemukan atau sudah dihapus.', 'error');
+        });
+    }
+  }, [showToast]);
+
+  // Handler saat kartu produk di etalase diklik
+  const handleOpenDetail = (product: Product) => {
+    setSelectedProduct(product);
+    // Ubah URL tanpa mereload halaman
+    window.history.pushState({}, '', `/?product=${product.id}`);
+  };
+
+  // Handler saat modal detail ditutup
+  const handleCloseDetail = () => {
+    setSelectedProduct(null);
+    // Kembalikan URL ke homepage bersih
+    window.history.pushState({}, '', window.location.pathname);
+  };
 
   // Fetch all products
   const fetchProducts = useCallback(async () => {
@@ -251,7 +276,7 @@ const CampusCycleContent: React.FC = () => {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onSelect={(p) => setSelectedProduct(p)}
+                    onSelect={handleOpenDetail}
                   />
                 ))}
               </div>
@@ -348,7 +373,7 @@ const CampusCycleContent: React.FC = () => {
       {/* Product Detail Modal */}
       <ProductDetailModal
         product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        onClose={handleCloseDetail}
       />
 
       {/* Auth Modal */}

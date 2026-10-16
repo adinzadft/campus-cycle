@@ -13,7 +13,9 @@ import {
   LogOut,
   CreditCard,
   Edit2,
-  Check
+  Check,
+  KeyRound,
+  RefreshCw
 } from 'lucide-react';
 
 interface UserProfileModalProps {
@@ -36,6 +38,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [whatsapp, setWhatsapp] = useState(user?.whatsapp || '');
   const [studentId, setStudentId] = useState(user?.studentId || '');
   const [isSaving, setIsSaving] = useState(false);
+
+  // State untuk alur Verifikasi Email OTP
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
 
   if (!isOpen || !user) return null;
 
@@ -62,6 +70,42 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     await logout();
     showToast('Anda telah keluar dari akun.', 'info');
     onClose();
+  };
+
+  // Handler Kirim / Minta Kode OTP baru ke Email
+  const handleRequestOtp = async () => {
+    setIsSendingOtp(true);
+    try {
+      await api.auth.resendOtp(user.email);
+      showToast('Kode OTP verifikasi telah dikirim ke email kampus Anda!', 'success');
+      setShowOtpInput(true);
+    } catch (err: any) {
+      showToast(err.message || 'Gagal mengirim kode OTP.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Handler Submit Verifikasi OTP
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.trim().length < 6) {
+      showToast('Masukkan 6 digit kode OTP valid.', 'error');
+      return;
+    }
+
+    setIsVerifyingEmail(true);
+    try {
+      await api.auth.verifyEmail(user.email, otpCode.trim());
+      showToast('Email kampus Anda berhasil diverifikasi!', 'success');
+      setShowOtpInput(false);
+      setOtpCode('');
+      onClose();
+    } catch (err: any) {
+      showToast(err.message || 'Kode OTP salah atau telah kadaluarsa.', 'error');
+    } finally {
+      setIsVerifyingEmail(false);
+    }
   };
 
   return (
@@ -149,6 +193,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               )}
             </div>
 
+            {/* Box Verifikasi Email / KTM jika Unverified */}
             {user.verificationStatus === 'unverified' && (
               <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2.5">
                 <p className="font-bold text-amber-950 flex items-center gap-1.5">
@@ -159,35 +204,65 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   Untuk dapat memasang barang di etalase, Anda wajib memverifikasi email kampus atau mengunggah kartu mahasiswa (KTM).
                 </p>
 
-                <div className="space-y-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await api.auth.verifyEmail();
-                        showToast('Email kampus Anda berhasil diverifikasi!', 'success');
-                        onClose();
-                      } catch (err: any) {
-                        showToast(err.message || 'Gagal memverifikasi email.', 'error');
-                      }
-                    }}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Verifikasi Email Mahasiswa</span>
-                  </button>
+                {!showOtpInput ? (
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={isSendingOtp}
+                      onClick={handleRequestOtp}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                    >
+                      {isSendingOtp ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Mail className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSendingOtp ? 'Sending OTP...' : 'Verifikasi Email via Kode OTP'}</span>
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      onClose();
-                      openKtmModal();
-                    }}
-                    className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Atau Verifikasi via Foto KTM</span>
-                  </button>
-                </div>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        openKtmModal();
+                      }}
+                      className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Atau Verifikasi via Foto KTM</span>
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleVerifyOtp} className="space-y-2 pt-1">
+                    <div className="relative">
+                      <KeyRound className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="Masukkan 6 digit kode OTP"
+                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-amber-300 rounded-lg font-mono tracking-widest text-slate-800 focus:outline-emerald-600"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={isVerifyingEmail}
+                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors"
+                      >
+                        {isVerifyingEmail ? 'Memeriksa...' : 'Konfirmasi OTP'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowOtpInput(false)}
+                        className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             )}
 

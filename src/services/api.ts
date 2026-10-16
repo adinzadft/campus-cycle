@@ -74,6 +74,11 @@ function mapProduct(p: any): Product {
   const createdTime = p.created_at ? new Date(p.created_at).getTime() : Date.now();
   const updatedTime = p.updated_at ? new Date(p.updated_at).getTime() : createdTime;
 
+  // Mendapatkan array images dengan fallback ke image_url jika images kosong
+  const imagesList = Array.isArray(p.images) && p.images.length > 0 
+    ? p.images 
+    : (p.image_url ? [p.image_url] : []);
+
   return {
     id: p.id,
     ownerId: p.owner_id || '',
@@ -85,7 +90,8 @@ function mapProduct(p: any): Product {
     category: p.category as Exclude<ProductCategory, 'Semua'>,
     condition: p.condition as ProductCondition,
     description: p.description || '',
-    imageUrl: p.image_url || '',
+    imageUrl: p.image_url || imagesList[0] || '',
+    images: imagesList,
     whatsapp: p.whatsapp || '',
     campus: p.campus || sellerCampus,
     codLocation: p.cod_location || '',
@@ -247,6 +253,7 @@ export const api = {
       const currentUser = await api.auth.getMe();
       return { user: currentUser, message: 'Email berhasil diverifikasi' };
     },
+
     async resendOtp(email: string) {
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -301,6 +308,29 @@ export const api = {
   },
 
   products: {
+    // Fungsi upload banyak gambar ke Supabase Storage Bucket 'product-images'
+    async uploadProductImages(files: File[]): Promise<string[]> {
+      const uploadPromises = files.map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        return data.publicUrl;
+      });
+
+      return await Promise.all(uploadPromises);
+    },
+
     async getAll(params?: { search?: string; category?: string; sort?: string; ownerId?: string }): Promise<Product[]> {
       let query = supabase.from('products').select('*, profiles(name, campus, is_email_verified, is_ktm_verified)');
 
@@ -346,11 +376,13 @@ export const api = {
       condition: string;
       description: string;
       imageUrl: string;
+      images?: string[];
       whatsapp: string;
       campus?: string;
       codLocation?: string;
     }): Promise<{ product: Product; message: string }> {
       const currentUser = await api.auth.getMe();
+      const imagesList = data.images && data.images.length > 0 ? data.images : [data.imageUrl];
 
       const { data: newProd, error } = await supabase
         .from('products')
@@ -360,7 +392,8 @@ export const api = {
           category: data.category,
           condition: data.condition,
           description: data.description,
-          image_url: data.imageUrl,
+          image_url: data.imageUrl || imagesList[0],
+          images: imagesList,
           whatsapp: data.whatsapp,
           campus: data.campus || currentUser.campus,
           cod_location: data.codLocation,
@@ -383,6 +416,7 @@ export const api = {
       if (updates.condition) payload.condition = updates.condition;
       if (updates.description) payload.description = updates.description;
       if (updates.imageUrl) payload.image_url = updates.imageUrl;
+      if (updates.images) payload.images = updates.images;
       if (updates.whatsapp) payload.whatsapp = updates.whatsapp;
       if (updates.status) payload.status = updates.status;
 

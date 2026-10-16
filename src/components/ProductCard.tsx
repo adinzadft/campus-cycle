@@ -84,7 +84,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
           {/* Location snippet */}
           <div className="flex items-center gap-1 text-xs text-slate-500 mb-2">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate">{product.codLocation || product.campus}</span>
+            {/* BARU: Memanggil nama kampus/univ secara langsung */}
+            <span className="truncate">{product.campus}</span>
           </div>
         </div>
 

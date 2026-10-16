@@ -14,9 +14,7 @@ export const SafetyBanner: React.FC = () => {
           Transparan, Cepat, Tanpa Potongan Admin!
         </h1>
 
-        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-5 max-w-2xl">
-          Jual beli barang preloved khusus antar-mahasiswa satu kampus. Transaksi 100% COD di area kampus atau sekitar kos, bayar tunai atau QRIS saat bertemu. Aman dari penipuan dengan verifikasi email kampus dan KTM resmi!
-        </p>
+        
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-4 border-t border-slate-800 text-xs">
           <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2.5">
