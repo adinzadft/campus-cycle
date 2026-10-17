@@ -30,6 +30,19 @@ const CATEGORIES: ProductCategory[] = [
   'Lainnya'
 ];
 
+const CITIES: string[] = [
+  'Semua Kota',
+  'Malang',
+  'Surabaya',
+  'Bandung',
+  'Yogyakarta',
+  'Semarang',
+  'Solo',
+  'Depok',
+  'Bogor',
+  'Lainnya'
+];
+
 const CampusCycleContent: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -44,6 +57,21 @@ const CampusCycleContent: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Semua');
   const [sortOption, setSortOption] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
+  const [selectedCity, setSelectedCity] = useState<string>('Semua Kota');
+
+  // 1. Tambah state debouncedSearch
+const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+// 2. Efek penundaan 400ms saat mengetik
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchQuery);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [searchQuery]);
+
+
 
   // Modals
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -83,21 +111,22 @@ const CampusCycleContent: React.FC = () => {
 
   // Fetch all products
   const fetchProducts = useCallback(async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      const data = await api.products.getAll({
-        search: searchQuery || undefined,
-        category: selectedCategory,
-        sort: sortOption,
-      });
-      setProducts(data);
-    } catch (err: any) {
-      setFetchError(err.message || 'Gagal memuat katalog barang dari server.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery, selectedCategory, sortOption]);
+  setIsLoading(true);
+  setFetchError(null);
+  try {
+    const data = await api.products.getAll({
+      search: debouncedSearch || undefined,
+      category: selectedCategory,
+      city: selectedCity,
+      sort: sortOption,
+    });
+    setProducts(data);
+  } catch (err: any) {
+    setFetchError(err.message || 'Gagal memuat katalog barang dari server.');
+  } finally {
+    setIsLoading(false);
+  }
+}, [debouncedSearch, selectedCategory, selectedCity, sortOption]);
 
   useEffect(() => {
     fetchProducts();
@@ -114,6 +143,7 @@ const CampusCycleContent: React.FC = () => {
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('Semua');
+    setSelectedCity('Semua Kota');
     setSortOption('newest');
     setOnlyAvailable(false);
   };
@@ -164,6 +194,21 @@ const CampusCycleContent: React.FC = () => {
                       Batal
                     </button>
                   )}
+                </div>
+
+                {/* City Select Filter */}
+                <div className="w-full md:w-48">
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="w-full py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-emerald-600"
+                  >
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c === 'Semua Kota' ? 'Semua Kota' : `${c}`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Category Select */}

@@ -94,6 +94,7 @@ function mapProduct(p: any): Product {
     images: imagesList,
     whatsapp: p.whatsapp || '',
     campus: p.campus || sellerCampus,
+    city: p.city || 'Malang',
     codLocation: p.cod_location || '',
     status: (p.status as 'available' | 'sold') || 'available',
     isDemo: Boolean(p.is_demo),
@@ -331,11 +332,14 @@ export const api = {
       return await Promise.all(uploadPromises);
     },
 
-    async getAll(params?: { search?: string; category?: string; sort?: string; ownerId?: string }): Promise<Product[]> {
+    async getAll(params?: { search?: string; category?: string; city?: string; sort?: string; ownerId?: string }): Promise<Product[]> {
       let query = supabase.from('products').select('*, profiles(name, campus, is_email_verified, is_ktm_verified)');
 
       if (params?.category && params.category !== 'Semua') {
         query = query.eq('category', params.category);
+      }
+      if (params?.city && params.city !== 'Semua Kota') {
+        query = query.eq('city', params.city);
       }
       if (params?.ownerId) {
         query = query.eq('owner_id', params.ownerId);
@@ -379,6 +383,7 @@ export const api = {
       images?: string[];
       whatsapp: string;
       campus?: string;
+      city?: string;
       codLocation?: string;
     }): Promise<{ product: Product; message: string }> {
       const currentUser = await api.auth.getMe();
@@ -396,6 +401,7 @@ export const api = {
           images: imagesList,
           whatsapp: data.whatsapp,
           campus: data.campus || currentUser.campus,
+          city: data.city || 'Malang',
           cod_location: data.codLocation,
           status: 'available',
           owner_id: currentUser.id,
@@ -418,6 +424,9 @@ export const api = {
       if (updates.imageUrl) payload.image_url = updates.imageUrl;
       if (updates.images) payload.images = updates.images;
       if (updates.whatsapp) payload.whatsapp = updates.whatsapp;
+      if (updates.campus) payload.campus = updates.campus;
+      if (updates.city) payload.city = updates.city;
+      if (updates.codLocation) payload.cod_location = updates.codLocation;
       if (updates.status) payload.status = updates.status;
 
       const { data, error } = await supabase

@@ -19,6 +19,18 @@ interface SellProductFormProps {
   openKtmModal: () => void;
 }
 
+const CITY_OPTIONS = [
+  'Malang',
+  'Surabaya',
+  'Bandung',
+  'Yogyakarta',
+  'Semarang',
+  'Solo',
+  'Depok',
+  'Bogor',
+  'Lainnya'
+];
+
 export const SellProductForm: React.FC<SellProductFormProps> = ({
   onSuccess,
   openAuthModal,
@@ -35,6 +47,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
   const [campus, setCampus] = useState(user?.campus || '');
   const [codLocation, setCodLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [city, setCity] = useState('Malang');
 
   // State untuk Multi-Image Upload
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -172,6 +185,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
         imageUrl: uploadedUrls[0] || '', // Cover utama
         images: uploadedUrls,            // Array seluruh foto
         whatsapp: cleanWa,
+        city,
         campus: campus.trim() || user.campus,
         codLocation: codLocation.trim() || 'Area Kampus',
       });
@@ -289,11 +303,28 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
           </div>
         </div>
 
-        {/* Kampus & Area COD */}
+        {/* Kota / Wilayah & Nama Kampus */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Kampus *
+              Kota / Wilayah *
+            </label>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-emerald-600 font-medium"
+            >
+              {CITY_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Nama Kampus *
             </label>
             <div className="relative">
               <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -307,22 +338,23 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
               />
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Lokasi Favorit COD Kampus *
-            </label>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                required
-                value={codLocation}
-                onChange={(e) => setCodLocation(e.target.value)}
-                placeholder="Misal: Kantin Saintek / Perpustakaan Pusat"
-                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-emerald-600 focus:bg-white transition-all"
-              />
-            </div>
+        {/* Area COD Kampus */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Lokasi Favorit COD Kampus *
+          </label>
+          <div className="relative">
+            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              required
+              value={codLocation}
+              onChange={(e) => setCodLocation(e.target.value)}
+              placeholder="Misal: Kantin Saintek / Perpustakaan Pusat"
+              className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-emerald-600 focus:bg-white transition-all"
+            />
           </div>
         </div>
 

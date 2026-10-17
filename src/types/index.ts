@@ -34,6 +34,18 @@ export interface User {
   createdAt: number;
 }
 
+export type CityCategory =
+  | 'Semua Kota'
+  | 'Malang'
+  | 'Surabaya'
+  | 'Bandung'
+  | 'Yogyakarta'
+  | 'Semarang'
+  | 'Solo'
+  | 'Depok'
+  | 'Bogor'
+  | 'Lainnya';
+
 export interface Product {
   id: string;
   ownerId: string;
@@ -49,7 +61,8 @@ export interface Product {
   images?: string[];
   whatsapp: string;
   campus: string;
-  codLocation?: string;
+  city?: string; // Kolom kategori kota lokasi
+  codLocation: string;
   status: 'available' | 'sold';
   isDemo?: boolean;
   createdAt: number;
