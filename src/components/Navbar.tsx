@@ -21,20 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      {/* Top domain bar */}
-      <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="font-mono text-slate-200 font-semibold tracking-wider">campuscycle.id</span>
-            <span className="hidden md:inline text-slate-400">| Pasar Preloved Eksklusif Mahasiswa</span>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <span className="hidden sm:inline text-emerald-400">0% Biaya Admin</span>
-            <span className="text-slate-400">COD Aman Kampus</span>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Main header navbar adhering to Top Bar Contract */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
