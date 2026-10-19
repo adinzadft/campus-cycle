@@ -227,7 +227,7 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Contoh: Buku Kalkulus Purcell Ed.9 / Kipas Meja Kos"
+            placeholder="Contoh: Kipas, jaket, buku, dll"
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-emerald-600 focus:bg-white transition-all"
           />
         </div>

@@ -183,7 +183,7 @@ useEffect(() => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari buku kalkulus, kipas kos, jas lab, monitor, dispenser..."
+                    placeholder="Cari Barang"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-emerald-600 focus:bg-white transition-all"
                   />
                   {searchQuery && (
