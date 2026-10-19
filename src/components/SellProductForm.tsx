@@ -258,11 +258,11 @@ export const SellProductForm: React.FC<SellProductFormProps> = ({
               onChange={(e) => setCategory(e.target.value as any)}
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-emerald-600 font-medium"
             >
-              <option value="Buku">Buku & Catatan Kuliah</option>
-              <option value="Elektronik">Elektronik & Gadget</option>
-              <option value="Pakaian">Pakaian & Jas Lab</option>
-              <option value="Kebutuhan Kos">Kebutuhan Kamar Kos</option>
-              <option value="Aksesoris">Aksesoris & Kendaraan</option>
+              <option value="Buku">Buku</option>
+              <option value="Elektronik">Elektronik</option>
+              <option value="Pakaian">Pakaian</option>
+              <option value="Kebutuhan Kos">Kebutuhan Kos</option>
+              <option value="Aksesoris">Aksesoris</option>
               <option value="Lainnya">Lainnya</option>
             </select>
           </div>
